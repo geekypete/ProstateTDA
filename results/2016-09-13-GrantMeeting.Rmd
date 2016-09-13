@@ -1,0 +1,26 @@
+---
+output: html_document
+---
+##Notes from Grant Meeting 2016-09-13
+
+###Aim 1
+1. How do we identify correct areas?
+2. How do we deal with stroma vs gland?
+3. How do we quantify robust probability distributions for our descriptors?
+* Example: PCA find principle components that explain ~90% variation, we are
+trying to find descriptors that explain most of variation.
+
+####Experimental Design
+1. ROI Selection(focus on small ROI, scanning window)
+2. Some ROIs with persistence diagrams with landscapes, show 
+where they came from on the slide, map the visualization from the diagrams back
+to the slide.
+3. Create slide of:
+* Multidimensional scaling
+* Bottleneck Heatmap
+* Dendrogram
+
+####Thoughts
+1. Can we look at biopsies? Is there any valuable information there? 
+###Aim 2
+1. (John need to weigh in) 
