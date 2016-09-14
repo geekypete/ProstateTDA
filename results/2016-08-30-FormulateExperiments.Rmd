@@ -1,0 +1,21 @@
+---
+output: html_document
+---
+#Formulate Experiments
+###1. Mean Landscape Diagram  
+
+1. Compute Landscape Diagram for all ROIs: $\overline{\lambda}_{n}(t)=\frac{1}{n}\sum_{i=1}^{n}\lambda_{i}(t)$
+
+####References  
+[Statistical Toplogical Data Analysis Using Persistence Landscapes](https://arxiv.org/pdf/1207.6437.pdf)  
+[Stochastic Convergence of Persistence Landscapes and Silhouettes](https://arxiv.org/pdf/1312.0308v1.pdf)  
+
+###2. Mean Silhoutte Diagram  
+
+###3. Persistence Intensity Functions
+
+####References
+[Statistical Analysis of Persistence Intensity Functions](https://arxiv.org/pdf/1510.02502v1.pdf)
+
+###4. Kolmogorov-Smirnov 
+
