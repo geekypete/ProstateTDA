@@ -1,0 +1,137 @@
+---
+output: html_document
+---
+
+##QuBBD Figure Generation
+
+###Dataset Description 
+
+| Gleason Grade | Image Count   |  Dimensions
+| :-----------: |:-------------:| :----------:
+| Grade 3 | 19 | 1100 x 1100
+| Grade 4 | 48 | 1100 x 1100
+| Grade 5 | 12 | 1100 x 1100
+
+###Preprocessing
+```{r, cache=TRUE}
+rm(list=ls())
+library(doParallel)
+library(foreach)
+library(stringr)
+library(TDA)
+library(cluster)
+library(ggplot2)
+library(gplots)
+no_cores <- detectCores()
+setwd("~/Documents/Lawson_Research/")
+nuclei<-read.csv("./ProstateTDA/data/2016-09-14/grant1100sub.csv")
+nuclei$Metadata_FileLocation<-gsub(".*\\_(.*)\\..*","\\1",nuclei$Metadata_FileLocation)
+meta<-unique(nuclei$Metadata_FileLocation)
+nucleisplit<-split(nuclei, nuclei$Metadata_FileLocation)
+gleason<-str_extract(meta, "(?<=g)[0-9]")
+```
+
+###Generate Persistence Diagrams
+```{r, cache=TRUE}
+Diag<-list()
+cl<-makeCluster(no_cores)
+registerDoParallel(cl)
+strt<-Sys.time()
+Diag<-foreach(i=nucleisplit, .packages='TDA') %dopar%
+{
+  xnuc<-i$Location_Center_X
+  ynuc<-i$Location_Center_Y
+  X<-matrix(c(i$Location_Center_X,i$Location_Center_Y),ncol=2)
+  xlim<-c(0,max(xnuc))
+  ylim<-c(0,max(ynuc))
+  grid<-3
+  gridDiag( X=X, FUN=dtm, m0=.01, lim=cbind(xlim,ylim), location=TRUE, by=grid, sublevel=T, library="Dionysus", printProgress=FALSE )
+}
+print(Sys.time()-strt)
+stopCluster(cl)
+```
+
+###Compute Pairwise Bottleneck Distance
+```{r, fig.height=9, fig.width=9, cache=TRUE}
+no_cores <- detectCores()
+cl<-makeCluster(no_cores)
+registerDoParallel(cl)
+strt<-Sys.time()
+
+bottleneck<-foreach(i = 1:length(Diag), .packages='TDA', .combine=cbind) %:% foreach(j= 1:length(Diag), .packages='TDA', .combine=c) %dopar% {
+    bottleneck(Diag[[i]][[1]],Diag[[j]][[1]], dimension=1)
+}
+print(Sys.time()-strt)
+stopCluster(cl)
+colnames(bottleneck)<-gleason
+rownames(bottleneck)<-gleason
+distance = dist(bottleneck, method = "manhattan")
+cluster = hclust(distance, method = "ward.D")
+heatmap.2(bottleneck,
+  Rowv = as.dendrogram(cluster), # apply default clustering method
+  Colv = as.dendrogram(cluster) # apply default clustering method
+)
+```
+
+###Compute Pairwise Wasserstein Distance
+```{r, fig.height=9, fig.width=9}
+cl<-makeCluster(no_cores)
+registerDoParallel(cl)
+strt<-Sys.time()
+
+wasserstein<-foreach(i = 1:length(Diag), .packages='TDA', .combine=cbind) %:% foreach(j= 1:length(Diag), .packages='TDA', .combine=c) %dopar% {
+    wasserstein(Diag[[i]][[1]],Diag[[j]][[1]], dimension=1)
+}
+print(Sys.time()-strt)
+stopCluster(cl)
+colnames(wasserstein)<-gleason
+rownames(wasserstein)<-gleason
+distance = dist(wasserstein, method = "manhattan")
+cluster = hclust(distance, method = "ward.D")
+heatmap.2(wasserstein,
+  Rowv = as.dendrogram(cluster), # apply default clustering method
+  Colv = as.dendrogram(cluster) # apply default clustering method
+)
+heatmap.2(wasserstein,
+  Rowv = gleason, # apply default clustering method
+  Colv = gleason # apply default clustering method
+)
+
+row<-wasserstein[order(rownames(wasserstein)),]
+col<-row[,order(colnames(wasserstein))]
+heatmap.2(col, Rowv=FALSE, Colv=FALSE)
+```
+
+###Bottleneck Cluster Dendrogram
+```{r,fig.height=9, fig.width=9, cache=TRUE}
+plot(hclust(dist(bottleneck), method="single"), axes=FALSE, ylab='', xlab='', main=NULL)
+```
+###Wasserstein Cluster Dendrogram
+```{r,fig.height=9, fig.width=9, cache=TRUE}
+plot(hclust(dist(wasserstein), method="single"), axes=FALSE, ylab='', xlab='', main=NULL)
+```
+###Multidimensional Scaling
+```{r,fig.height=9, fig.width=9, cache=TRUE}
+d <- dist(bottleneck) 
+fit <- cmdscale(d,eig=TRUE, k=2) # k is the number of dim
+x <- fit$points[,1]
+y <- fit$points[,2]
+plot(x, y, main="Bottleneck",	type="n")
+text(x, y, labels = row.names(bottleneck), cex=.7, col=gleason)
+
+d <- dist(wasserstein)
+fit <- cmdscale(d,eig=TRUE, k=2) # k is the number of dim
+x <- fit$points[,1]
+y <- fit$points[,2]
+plot(x, y, main="Wasserstein",	type="n")
+text(x, y, labels = row.names(wasserstein), cex=.7, col=gleason)
+```
+
+###K-Means Clustering
+```{r, fig.height=9, fig.width=9, cache=TRUE}
+fitBot<-kmeans(bottleneck, 5)
+fitWas<-kmeans(wasserstein, 5)
+clusplot(bottleneck, fitBot$cluster, color=TRUE, shade=TRUE, 
+  	labels=2, lines=0)
+clusplot(wasserstein, fitWas$cluster, color=TRUE, shade=TRUE, 
+  	labels=2, lines=0)
